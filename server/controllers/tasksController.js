@@ -1,10 +1,15 @@
-// server/controllers/tasksController.js
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
 
+const parseOptionalDate = (value) => {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return undefined;
+  return d;
+};
+
 exports.list = async (req, res, next) => {
   try {
-    // return tasks grouped by bucket for convenience
     const tasks = await Task.find().sort({ createdAt: -1 });
     const grouped = { today: [], tomorrow: [], week: [] };
     tasks.forEach(t => {
@@ -20,9 +25,17 @@ exports.list = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const { title, description = '', bucket = 'today' } = req.body;
+    const { title, description = '', bucket = 'today', startDate, expectedCompletion } = req.body;
     if (!title || typeof title !== 'string') return res.status(400).json({ message: 'Title is required' });
-    const task = new Task({ title: title.trim(), description: description.trim(), bucket });
+
+    const task = new Task({
+      title: title.trim(),
+      description: description.trim(),
+      bucket,
+      startDate: parseOptionalDate(startDate),
+      expectedCompletion: parseOptionalDate(expectedCompletion)
+    });
+
     await task.save();
     res.status(201).json(task);
   } catch (err) {
@@ -46,7 +59,12 @@ exports.update = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'Invalid id' });
-    const updates = req.body;
+
+    const updates = { ...req.body };
+    // parse date strings if present
+    if (updates.startDate !== undefined) updates.startDate = parseOptionalDate(updates.startDate);
+    if (updates.expectedCompletion !== undefined) updates.expectedCompletion = parseOptionalDate(updates.expectedCompletion);
+
     const task = await Task.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
     if (!task) return res.status(404).json({ message: 'Not found' });
     res.json(task);

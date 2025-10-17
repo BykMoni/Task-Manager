@@ -1,8 +1,7 @@
 import React from 'react';
-import TaskForm from './TaskForm';
 import TaskItem from './TaskItem';
 
-export default function TaskCard({ title, tasks = [], onCreate, onToggle, onDelete, onEdit }) {
+export default function TaskCard({ title, tasks = [], onToggle, onDelete, onEdit }) {
   return (
     <section className="task-card">
       <div className="card-header">
@@ -10,17 +9,19 @@ export default function TaskCard({ title, tasks = [], onCreate, onToggle, onDele
       </div>
 
       <div className="card-body">
-        <TaskForm onCreate={onCreate} placeholder={`Add New Task`} />
         <ul className="task-list">
-          {tasks.map(t => (
-            <TaskItem
-              key={t.id}
-              task={t}
-              onToggle={() => onToggle(t.id)}
-              onDelete={() => onDelete(t.id)}
-              onEdit={(id, newTitle) => onEdit(id, newTitle)}
-            />
-          ))}
+          {tasks.map(t => {
+            const taskId = t._id || t.id;
+            return (
+              <TaskItem
+                key={taskId}
+                task={t}
+                onToggle={() => onToggle(taskId)}
+                onDelete={() => onDelete(taskId)}
+                onEdit={(id, newTitle) => onEdit(taskId, newTitle)}
+              />
+            );
+          })}
           {tasks.length === 0 && <li className="empty">No tasks</li>}
         </ul>
       </div>

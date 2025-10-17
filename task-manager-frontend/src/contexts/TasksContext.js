@@ -1,70 +1,92 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import api from '../services/api';
 
 const TasksContext = createContext(null);
-const STORAGE_KEY = 'tm_tasks_v1';
-
-const initial = {
-  today: [
-    { id: 't1', title: 'Research content ideas', completed: false },
-    { id: 't2', title: 'Create a database of guest authors', completed: false },
-    { id: 't3', title: "Renew driver's license", completed: false },
-    { id: 't4', title: 'Consult accountant', completed: false }
-  ],
-  tomorrow: [
-    { id: 'tm1', title: 'Create job posting for SEO specialist', completed: false },
-    { id: 'tm2', title: 'Request design assets for landing page', completed: false }
-  ],
-  week: [
-    { id: 'w1', title: 'Print business card', completed: false },
-    { id: 'w2', title: 'Plan content calendar', completed: false }
-  ]
-};
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initial;
-    const parsed = JSON.parse(raw);
-    // ensure buckets exist
-    return { today: parsed.today || [], tomorrow: parsed.tomorrow || [], week: parsed.week || [] };
-  } catch (e) {
-    console.warn('Failed to load tasks from localStorage', e);
-    return initial;
-  }
-}
+const empty = { today: [], tomorrow: [], week: [] };
 
 export function TasksProvider({ children }) {
-  const [tasks, setTasks] = useState(() => load());
+  const [tasks, setTasks] = useState(empty);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Load tasks from server
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch (e) {
-      console.warn('Failed to save tasks to localStorage', e);
+    let active = true;
+    (async () => {
+      try {
+        const data = await api.getTasks();
+        if (!active) return;
+        setTasks({
+          today: data.today || [],
+          tomorrow: data.tomorrow || [],
+          week: data.week || []
+        });
+      } catch (err) {
+        console.error('Fetch error:', err);
+        if (active) setError('Failed to load tasks');
+        setTasks(empty);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const findById = (bucket, id) => {
+    const arr = tasks[bucket] || [];
+    return arr.find(t => t._id === id || t.id === id);
+  };
+
+ // inside TasksContext: replace addTask function with this version
+const addTask = async (bucket, title, description = '', startDate = undefined, expectedCompletion = undefined) => {
+  const payload = { title, description, bucket };
+  if (startDate) payload.startDate = startDate;
+  if (expectedCompletion) payload.expectedCompletion = expectedCompletion;
+  const created = await api.createTask(payload);
+  setTasks(prev => ({ ...prev, [bucket]: [created, ...(prev[bucket] || [])] }));
+  return created;
+};
+
+
+  const toggleTask = async (bucket, id) => {
+    const current = findById(bucket, id);
+    if (!current) {
+      console.warn(`toggleTask: not found bucket=${bucket} id=${id}`);
+      return;
     }
-  }, [tasks]);
-
-  const addTask = (bucket, title) => {
-    const id = Math.random().toString(36).slice(2, 9);
-    setTasks(prev => ({ ...prev, [bucket]: [{ id, title, completed: false }, ...(prev[bucket] || [])] }));
-  };
-
-  const updateTask = (bucket, id, updates) => {
+    const updated = await api.updateTask(id, { completed: !current.completed });
     setTasks(prev => ({
       ...prev,
-      [bucket]: (prev[bucket] || []).map(t => t.id === id ? { ...t, ...updates } : t)
+      [bucket]: (prev[bucket] || []).map(t => (t._id === id || t.id === id ? updated : t))
     }));
+    return updated;
   };
 
-  const toggleTask = (bucket, id) => {
+  const updateTask = async (bucket, id, updates) => {
+    const current = findById(bucket, id);
+    if (!current) {
+      console.warn(`updateTask: not found bucket=${bucket} id=${id}`);
+      return;
+    }
+    const updated = await api.updateTask(id, updates);
     setTasks(prev => ({
       ...prev,
-      [bucket]: (prev[bucket] || []).map(t => t.id === id ? { ...t, completed: !t.completed } : t)
+      [bucket]: (prev[bucket] || []).map(t => (t._id === id || t.id === id ? updated : t))
     }));
+    return updated;
   };
 
-  const deleteTask = (bucket, id) => {
-    setTasks(prev => ({ ...prev, [bucket]: (prev[bucket] || []).filter(t => t.id !== id) }));
+  const deleteTask = async (bucket, id) => {
+    const current = findById(bucket, id);
+    if (!current) {
+      console.warn(`deleteTask: not found bucket=${bucket} id=${id}`);
+      return;
+    }
+    await api.deleteTask(id);
+    setTasks(prev => ({
+      ...prev,
+      [bucket]: (prev[bucket] || []).filter(t => !(t._id === id || t.id === id))
+    }));
   };
 
   const counts = {
@@ -75,7 +97,10 @@ export function TasksProvider({ children }) {
   };
 
   return (
-    <TasksContext.Provider value={{ tasks, addTask, updateTask, toggleTask, deleteTask, counts }}>
+    <TasksContext.Provider value={{
+      tasks, loading, error,
+      addTask, updateTask, toggleTask, deleteTask, counts
+    }}>
       {children}
     </TasksContext.Provider>
   );

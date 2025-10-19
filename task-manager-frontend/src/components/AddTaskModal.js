@@ -2,20 +2,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useToast } from '../contexts/ToastContext';
 
+const STORAGE_KEY = 'tm_user_lists_v1';
+
 export default function AddTaskModal({ open, onClose, onConfirm }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [expected, setExpected] = useState('');
   const [bucket, setBucket] = useState('today');
+  const [list, setList] = useState('');
   const [saving, setSaving] = useState(false);
   const titleRef = useRef(null);
   const modalRef = useRef(null);
   const { show } = useToast();
 
+  // load available lists when modal opens
   useEffect(() => {
     if (open) {
       setTitle(''); setDescription(''); setStartDate(''); setExpected(''); setBucket('today');
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const lists = stored ? JSON.parse(stored) : [];
+      setList(lists[0] || '');
+      // focus title
       setTimeout(() => titleRef.current?.focus(), 60);
     }
   }, [open]);
@@ -46,9 +54,28 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
         title: title.trim(),
         description: description.trim(),
         startDate: startDate ? new Date(startDate).toISOString() : undefined,
-        expectedCompletion: expected ? new Date(expected).toISOString() : undefined
+        expectedCompletion: expected ? new Date(expected).toISOString() : undefined,
+        list: list || undefined
       };
+
       await onConfirm(payload);
+
+      // Persist the list into localStorage so sidebar recognizes it
+      if (payload.list) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const arr = raw ? JSON.parse(raw) : [];
+          const normalized = String(payload.list).trim();
+          if (normalized && !arr.includes(normalized)) {
+            // add to front
+            arr.unshift(normalized);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+          }
+        } catch (err) {
+          console.warn('Could not persist list to localStorage', err);
+        }
+      }
+
       show('Task added', { type: 'success' });
       onClose();
     } catch (err) {
@@ -58,6 +85,9 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
       setSaving(false);
     }
   };
+
+  const stored = localStorage.getItem(STORAGE_KEY);
+  const availableLists = stored ? JSON.parse(stored) : [];
 
   return (
     <div className="popup-overlay" onMouseDown={handleBackdropClick}>
@@ -125,6 +155,14 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
               <option value="today">Today</option>
               <option value="tomorrow">Tomorrow</option>
               <option value="week">This Week</option>
+            </select>
+          </label>
+
+          <label className="popup-row">
+            <span className="popup-label">List (optional)</span>
+            <select value={list} onChange={(e) => setList(e.target.value)} className="popup-input">
+              <option value=''>None</option>
+              {availableLists.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </label>
 

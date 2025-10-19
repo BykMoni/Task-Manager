@@ -1,11 +1,48 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useTasks } from '../contexts/TasksContext';
 
+const STORAGE_KEY = 'tm_user_lists_v1';
+
 export default function Sidebar() {
-  const { counts } = useTasks();
+  const { counts, tasks } = useTasks();
+  const navigate = useNavigate();
+  const [lists, setLists] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return ['Personal', 'Work', 'List 1']; }
+    }
+    const defaults = ['Personal', 'Work', 'List 1'];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+    return defaults;
+  });
 
   const activeClass = ({ isActive }) => isActive ? 'nav-item active' : 'nav-item';
+
+  const addList = () => {
+    const name = prompt('Enter new list name:');
+    if (!name) return;
+    const clean = name.trim();
+    if (!clean || lists.includes(clean)) return;
+    const next = [...lists, clean];
+    setLists(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const removeList = (list) => {
+    if (!window.confirm(`Remove list "${list}"?`)) return;
+    const next = lists.filter(l => l !== list);
+    setLists(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
+
+  // count how many tasks belong to each list
+  const all = [...(tasks.today || []), ...(tasks.tomorrow || []), ...(tasks.week || [])];
+  const listCounts = {};
+  all.forEach(t => {
+    const listName = t.list || 'Unassigned';
+    listCounts[listName] = (listCounts[listName] || 0) + 1;
+  });
 
   return (
     <aside className="sidebar">
@@ -32,10 +69,24 @@ export default function Sidebar() {
         <div className="section">
           <h4 className="section-title">LISTS</h4>
           <ul className="lists">
-            <li className="list-item"><span className="dot dot-pink" /> Personal <span className="muted-badge">3</span></li>
-            <li className="list-item"><span className="dot dot-blue" /> Work <span className="muted-badge">6</span></li>
-            <li className="list-item"><span className="dot dot-yellow" /> List 1 <span className="muted-badge">3</span></li>
-            <li className="add-list">+ Add New List</li>
+            {lists.map((list, i) => (
+              <li key={i} className="list-item" onClick={() => navigate(`/lists/${encodeURIComponent(list)}`)}>
+                <span className="dot dot-blue" /> {list}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span className="muted-badge">{listCounts[list] || 0}</span>
+                  <button
+                    className="mini-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeList(list);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            ))}
+            <li className="add-list" onClick={addList}>+ Add New List</li>
           </ul>
         </div>
 
@@ -49,7 +100,11 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-bottom">
-          <div className="sb-item"><NavLink to="/settings" className={({isActive})=> isActive ? 'nav-item active' : ''}>⚙️ Settings</NavLink></div>
+          <div className="sb-item">
+            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active' : ''}>
+              ⚙️ Settings
+            </NavLink>
+          </div>
           <div className="sb-item">Sign out</div>
         </div>
       </div>

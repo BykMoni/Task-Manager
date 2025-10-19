@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
 
-// GET /api/tasks - return grouped tasks by bucket
+// GET /api/tasks - return grouped tasks by bucket (and include list field)
 router.get('/', async (req, res, next) => {
   try {
     const tasks = await Task.find().sort({ createdAt: -1 });
@@ -19,16 +19,36 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// POST /api/tasks - create task
+// GET /api/tasks/:id
+router.get('/:id', async (req, res, next) => {
+  try {
+    const t = await Task.findById(req.params.id);
+    if (!t) return res.status(404).json({ message: 'Not found' });
+    res.json(t);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/tasks - create task (accepts optional list)
 router.post('/', async (req, res, next) => {
   try {
-    const { title, description = '', bucket = 'today', startDate, expectedCompletion } = req.body;
+    const {
+      title,
+      description = '',
+      bucket = 'today',
+      list = null,
+      startDate,
+      expectedCompletion
+    } = req.body;
+
     if (!title || typeof title !== 'string') return res.status(400).json({ message: 'Title is required' });
 
     const task = new Task({
       title: title.trim(),
       description: description.trim(),
       bucket,
+      list: list ? String(list) : null,
       startDate: startDate ? new Date(startDate) : undefined,
       expectedCompletion: expectedCompletion ? new Date(expectedCompletion) : undefined
     });
@@ -40,10 +60,13 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// PUT /api/tasks/:id - update task
+// PUT /api/tasks/:id - update (supports list)
 router.put('/:id', async (req, res, next) => {
   try {
-    const updated = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updates = { ...req.body };
+    if (updates.startDate) updates.startDate = new Date(updates.startDate);
+    if (updates.expectedCompletion) updates.expectedCompletion = new Date(updates.expectedCompletion);
+    const updated = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ message: 'Not found' });
     res.json(updated);
   } catch (err) {

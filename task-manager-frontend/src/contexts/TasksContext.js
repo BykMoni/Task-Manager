@@ -1,3 +1,4 @@
+// client/src/contexts/TasksContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from '../services/api';
 
@@ -9,7 +10,7 @@ export function TasksProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load tasks from server
+  // load tasks on mount
   useEffect(() => {
     let active = true;
     (async () => {
@@ -32,21 +33,34 @@ export function TasksProvider({ children }) {
     return () => { active = false; };
   }, []);
 
+  // find task by id in bucket
   const findById = (bucket, id) => {
     const arr = tasks[bucket] || [];
     return arr.find(t => t._id === id || t.id === id);
   };
 
- // inside TasksContext: replace addTask function with this version
-const addTask = async (bucket, title, description = '', startDate = undefined, expectedCompletion = undefined) => {
-  const payload = { title, description, bucket };
-  if (startDate) payload.startDate = startDate;
-  if (expectedCompletion) payload.expectedCompletion = expectedCompletion;
-  const created = await api.createTask(payload);
-  setTasks(prev => ({ ...prev, [bucket]: [created, ...(prev[bucket] || [])] }));
-  return created;
-};
+  // add task: accepts startDate and expectedCompletion (ISO strings) as optional
+  const addTask = async (bucket, title, description = '', startDate = undefined, expectedCompletion = undefined) => {
+    const payload = { title, description, bucket };
+    if (startDate) payload.startDate = startDate;
+    if (expectedCompletion) payload.expectedCompletion = expectedCompletion;
 
+    const created = await api.createTask(payload);
+    // mark as just created for animation
+    const createdWithFlag = { ...created, _justCreated: true };
+
+    setTasks(prev => ({ ...prev, [bucket]: [createdWithFlag, ...(prev[bucket] || [])] }));
+
+    // clear the _justCreated flag after animation (1.6s)
+    setTimeout(() => {
+      setTasks(current => ({
+        ...current,
+        [bucket]: (current[bucket] || []).map(t => (t._id === createdWithFlag._id ? { ...t, _justCreated: false } : t))
+      }));
+    }, 1600);
+
+    return createdWithFlag;
+  };
 
   const toggleTask = async (bucket, id) => {
     const current = findById(bucket, id);

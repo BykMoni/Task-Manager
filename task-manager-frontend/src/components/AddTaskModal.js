@@ -1,4 +1,6 @@
+// client/src/components/AddTaskModal.js
 import React, { useEffect, useRef, useState } from 'react';
+import { useToast } from '../contexts/ToastContext';
 
 export default function AddTaskModal({ open, onClose, onConfirm }) {
   const [title, setTitle] = useState('');
@@ -9,21 +11,15 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
   const [saving, setSaving] = useState(false);
   const titleRef = useRef(null);
   const modalRef = useRef(null);
+  const { show } = useToast();
 
-  // reset fields when opened
   useEffect(() => {
     if (open) {
-      setTitle('');
-      setDescription('');
-      setStartDate('');
-      setExpected('');
-      setBucket('today');
-      // autofocus title after small delay so the modal is in DOM
-      setTimeout(() => titleRef.current?.focus(), 50);
+      setTitle(''); setDescription(''); setStartDate(''); setExpected(''); setBucket('today');
+      setTimeout(() => titleRef.current?.focus(), 60);
     }
   }, [open]);
 
-  // close on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -31,7 +27,6 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // click outside to close
   const handleBackdropClick = (e) => {
     if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
   };
@@ -54,10 +49,11 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
         expectedCompletion: expected ? new Date(expected).toISOString() : undefined
       };
       await onConfirm(payload);
+      show('Task added', { type: 'success' });
       onClose();
     } catch (err) {
       console.error('Add task failed', err);
-      alert('Failed to create task');
+      show('Failed to add task: ' + (err.message || 'Unknown'), { type: 'error', duration: 5000 });
     } finally {
       setSaving(false);
     }
@@ -74,7 +70,7 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="popup-header">
-          <h3>Add New Task</h3>
+          <h3>Add Task</h3>
           <button className="popup-close" aria-label="Close" onClick={onClose}>&times;</button>
         </header>
 

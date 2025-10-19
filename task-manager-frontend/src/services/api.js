@@ -1,49 +1,58 @@
 // client/src/services/api.js
-
-const API_BASE = process.env.REACT_APP_API_BASE || '/api/tasks'; // works with CRA proxy
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api/tasks';
 
 async function handleResp(resp) {
+  const text = await resp.text().catch(() => '');
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    const msg = body.message || resp.statusText || 'API error';
+    console.error('API error response:', resp.status, body);
+    const msg = body && body.message ? body.message : (typeof body === 'string' ? body : resp.statusText || 'API error');
     const err = new Error(msg);
     err.status = resp.status;
+    err.raw = body;
     throw err;
   }
   if (resp.status === 204) return null;
-  return resp.json();
+  return body;
 }
 
-export default {
-  // GET all tasks (grouped)
-  getTasks: async () => {
-    const res = await fetch(API_BASE);
-    return handleResp(res);
-  },
+async function request(path = '', opts = {}) {
+  const url = path && path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const res = await fetch(url, opts);
+  return handleResp(res);
+}
 
-  // POST create task
-  createTask: async ({ title, description = '', bucket = 'today' }) => {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, bucket })
-    });
-    return handleResp(res);
-  },
+export async function getTasks() {
+  return request('', { method: 'GET' });
+}
 
-  // PUT update task
-  updateTask: async (id, updates) => {
-    const res = await fetch(`${API_BASE}/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    return handleResp(res);
-  },
+export async function createTask(payload) {
+  return request('', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
 
-  // DELETE task
-  deleteTask: async (id) => {
-    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-    return handleResp(res);
-  }
+export async function updateTask(id, updates) {
+  return request(`/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+}
+
+export async function deleteTask(id) {
+  return request(`/${id}`, { method: 'DELETE' });
+}
+
+// Named object assigned first to satisfy import/no-anonymous-default-export ESLint rule
+const api = {
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask
 };
+
+export default api;

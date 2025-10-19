@@ -1,3 +1,4 @@
+// client/src/pages/Dashboard.js
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import TaskCard from '../components/TaskCard';
@@ -6,7 +7,7 @@ import { useTasks } from '../contexts/TasksContext';
 
 function isInProgress(task) {
   if (task.completed) return false;
-  if (!task.startDate) return true; 
+  if (!task.startDate) return true;
   const start = new Date(task.startDate);
   return start <= new Date();
 }
@@ -22,11 +23,7 @@ export default function Dashboard() {
   const { tasks, addTask, toggleTask, deleteTask, updateTask, counts } = useTasks();
   const [showModal, setShowModal] = useState(false);
 
-  const handleConfirm = async ({ bucket, title, description, expected, startDate, expectedCompletion }) => {
-    await addTask(bucket, title, description || '', undefined);
-    await addTask(bucket, title, description, startDate ? startDate : undefined, expectedCompletion ? expectedCompletion : undefined);
-  };
-
+  // Flatten tasks across buckets
   const allTasks = [...(tasks.today || []), ...(tasks.tomorrow || []), ...(tasks.week || [])];
 
   const inProgress = allTasks.filter(isInProgress).sort((a,b)=> new Date(a.startDate||0) - new Date(b.startDate||0));
@@ -42,24 +39,40 @@ export default function Dashboard() {
 
   const handleToggle = async (id) => {
     const b = findBucket(id);
-    await toggleTask(b, id);
+    try {
+      await toggleTask(b, id);
+    } catch (err) {
+      console.error('toggle error', err);
+      alert('Failed to toggle task');
+    }
   };
 
   const handleDelete = async (id) => {
     const b = findBucket(id);
-    await deleteTask(b, id);
+    try {
+      await deleteTask(b, id);
+    } catch (err) {
+      console.error('delete error', err);
+      alert('Failed to delete task');
+    }
   };
 
   const handleEdit = async (id, newTitle) => {
     const b = findBucket(id);
-    await updateTask(b, id, { title: newTitle });
+    try {
+      await updateTask(b, id, { title: newTitle });
+    } catch (err) {
+      console.error('edit error', err);
+      alert('Failed to update task');
+    }
   };
 
   return (
     <div className="dashboard">
       <Header title="Upcoming" count={counts.total} />
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginBottom: 12 }}>
-        <button className="btn-add" onClick={() => setShowModal(true)}>+ Add New Task</button>
+        <button className="btn-add" onClick={() => setShowModal(true)}>+ Add Task</button>
       </div>
 
       <div className="grid">
@@ -92,10 +105,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <AddTaskModal open={showModal} onClose={() => setShowModal(false)} onConfirm={async (payload) => {
-        await addTask(payload.bucket, payload.title, payload.description || '', payload.startDate, payload.expectedCompletion);
-        setShowModal(false);
-      }} />
+      <AddTaskModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={async (payload) => {
+          try {
+            // payload: { bucket, title, description, startDate, expectedCompletion }
+            await addTask(payload.bucket, payload.title, payload.description || '', payload.startDate, payload.expectedCompletion);
+            setShowModal(false);
+          } catch (err) {
+            console.error('Create task failed', err);
+            alert('Failed to create task: ' + (err.message || 'unknown'));
+          }
+        }}
+      />
     </div>
   );
 }

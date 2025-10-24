@@ -1,11 +1,13 @@
 // client/src/pages/Dashboard.js
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Header from '../components/Header';
 import TaskCard from '../components/TaskCard';
 import AddTaskModal from '../components/AddTaskModal';
 import { useTasks } from '../contexts/TasksContext';
+import { useNavigate } from 'react-router-dom';
 
 function isInProgress(task) {
+  if (!task) return false;
   if (task.completed) return false;
   if (!task.startDate) return true;
   const start = new Date(task.startDate);
@@ -13,6 +15,7 @@ function isInProgress(task) {
 }
 
 function isUpcoming(task) {
+  if (!task) return false;
   if (task.completed) return false;
   if (!task.startDate) return true;
   const start = new Date(task.startDate);
@@ -20,59 +23,41 @@ function isUpcoming(task) {
 }
 
 export default function Dashboard() {
-  const { tasks, addTask, toggleTask, deleteTask, updateTask, counts } = useTasks();
+  const { allTasks = [], addTask, toggleTask, deleteTask, updateTask, counts = {}, setSelectedList } = useTasks();
   const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
 
-  // Flatten tasks across buckets
-  const allTasks = [...(tasks.today || []), ...(tasks.tomorrow || []), ...(tasks.week || [])];
+  const inProgress = useMemo(() => {
+    return allTasks.filter(isInProgress)
+      .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
+  }, [allTasks]);
 
-  const inProgress = allTasks.filter(isInProgress).sort((a,b)=> new Date(a.startDate||0) - new Date(b.startDate||0));
-  const upcoming = allTasks.filter(isUpcoming).sort((a,b)=> new Date(a.startDate||Infinity) - new Date(b.startDate||Infinity));
+  const upcoming = useMemo(() => {
+    return allTasks.filter(isUpcoming)
+      .sort((a, b) => new Date(a.startDate || Infinity) - new Date(b.startDate || Infinity));
+  }, [allTasks]);
 
-  const findBucket = (id) => {
-    const lists = { today: tasks.today || [], tomorrow: tasks.tomorrow || [], week: tasks.week || [] };
-    for (const k of Object.keys(lists)) {
-      if (lists[k].some(t => (t._id === id || t.id === id))) return k;
-    }
-    return 'today';
-  };
+  const thisWeek = useMemo(() => {
+    return allTasks.filter(t => (t.bucket || 'week') === 'week')
+      .sort((a,b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
+  }, [allTasks]);
 
   const handleToggle = async (id) => {
-    const b = findBucket(id);
-    try {
-      await toggleTask(b, id);
-    } catch (err) {
-      console.error('toggle error', err);
-      alert('Failed to toggle task');
-    }
+    try { await toggleTask(id); } catch (err) { console.error('toggle error', err); }
   };
-
   const handleDelete = async (id) => {
-    const b = findBucket(id);
-    try {
-      await deleteTask(b, id);
-    } catch (err) {
-      console.error('delete error', err);
-      alert('Failed to delete task');
-    }
+    try { await deleteTask(id); } catch (err) { console.error('delete error', err); }
   };
-
   const handleEdit = async (id, newTitle) => {
-    const b = findBucket(id);
-    try {
-      await updateTask(b, id, { title: newTitle });
-    } catch (err) {
-      console.error('edit error', err);
-      alert('Failed to update task');
-    }
+    try { await updateTask(id, { title: newTitle }); } catch (err) { console.error('edit error', err); }
   };
 
   return (
-    <div className="dashboard">
-      <Header title="Upcoming" count={counts.total} />
+    <div className="dashboard" style={{ padding: 18 }}>
+      <Header title="Upcoming" count={counts.total || 0} />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginBottom: 12 }}>
-        <button className="btn-add" onClick={() => setShowModal(true)}>+ Add Task</button>
+        <button className="btn-add" onClick={() => setShowModal(true)}>+ Add New Task</button>
       </div>
 
       <div className="grid">
@@ -83,6 +68,7 @@ export default function Dashboard() {
             onToggle={handleToggle}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onOpen={(id) => navigate(`/tasks/${encodeURIComponent(id)}`)}
           />
 
           <TaskCard
@@ -91,16 +77,18 @@ export default function Dashboard() {
             onToggle={handleToggle}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onOpen={(id) => navigate(`/tasks/${encodeURIComponent(id)}`)}
           />
         </div>
 
         <div className="col-right">
           <TaskCard
             title="This Week"
-            tasks={tasks.week || []}
-            onToggle={(id)=> { const b='week'; toggleTask(b,id); }}
-            onDelete={(id)=> { const b='week'; deleteTask(b,id); }}
-            onEdit={(id,newTitle)=> { const b='week'; updateTask(b,id,{title:newTitle}); }}
+            tasks={thisWeek}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onOpen={(id) => navigate(`/tasks/${encodeURIComponent(id)}`)}
           />
         </div>
       </div>
@@ -110,12 +98,16 @@ export default function Dashboard() {
         onClose={() => setShowModal(false)}
         onConfirm={async (payload) => {
           try {
-            // payload: { bucket, title, description, startDate, expectedCompletion }
-            await addTask(payload.bucket, payload.title, payload.description || '', payload.startDate, payload.expectedCompletion);
-            setShowModal(false);
+            // eslint-disable-next-line no-unused-vars
+            const created = await addTask(payload);
+            if (payload.list) {
+              setSelectedList(payload.list);
+              navigate(`/lists/${encodeURIComponent(payload.list)}`);
+            }
           } catch (err) {
-            console.error('Create task failed', err);
-            alert('Failed to create task: ' + (err.message || 'unknown'));
+            console.error('Add task failed', err);
+          } finally {
+            setShowModal(false);
           }
         }}
       />

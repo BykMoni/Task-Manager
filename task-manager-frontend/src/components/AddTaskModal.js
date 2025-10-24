@@ -16,14 +16,12 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
   const modalRef = useRef(null);
   const { show } = useToast();
 
-  // load available lists when modal opens
   useEffect(() => {
     if (open) {
       setTitle(''); setDescription(''); setStartDate(''); setExpected(''); setBucket('today');
       const stored = localStorage.getItem(STORAGE_KEY);
       const lists = stored ? JSON.parse(stored) : [];
       setList(lists[0] || '');
-      // focus title
       setTimeout(() => titleRef.current?.focus(), 60);
     }
   }, [open]);
@@ -60,14 +58,12 @@ export default function AddTaskModal({ open, onClose, onConfirm }) {
 
       await onConfirm(payload);
 
-      // Persist the list into localStorage so sidebar recognizes it
       if (payload.list) {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           const arr = raw ? JSON.parse(raw) : [];
           const normalized = String(payload.list).trim();
-          if (normalized && !arr.includes(normalized)) {
-            // add to front
+          if (normalized && !arr.some(x => String(x).trim().toLowerCase() === normalized.toLowerCase())) {
             arr.unshift(normalized);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
           }

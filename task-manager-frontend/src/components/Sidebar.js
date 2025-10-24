@@ -1,48 +1,57 @@
-import React, { useState } from 'react';
+// client/src/components/Sidebar.js
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTasks } from '../contexts/TasksContext';
 
-const STORAGE_KEY = 'tm_user_lists_v1';
+function normalizeKey(s) {
+  if (!s) return '';
+  return String(s).replace(/\s+/g, ' ').trim().toLowerCase();
+}
 
 export default function Sidebar() {
-  const { counts, tasks } = useTasks();
+  const { counts = {}, availableLists = [], listCounts = {}, setSelectedList } = useTasks();
   const navigate = useNavigate();
-  const [lists, setLists] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try { return JSON.parse(stored); } catch { return ['Personal', 'Work', 'List 1']; }
-    }
-    const defaults = ['Personal', 'Work', 'List 1'];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
-    return defaults;
-  });
 
-  const activeClass = ({ isActive }) => isActive ? 'nav-item active' : 'nav-item';
+  const goToList = (label) => {
+    if (!label) return;
+    setSelectedList(label);
+    navigate(`/lists/${encodeURIComponent(label)}`);
+  };
 
-  const addList = () => {
+  const addListHandler = () => {
     const name = prompt('Enter new list name:');
     if (!name) return;
     const clean = name.trim();
-    if (!clean || lists.includes(clean)) return;
-    const next = [...lists, clean];
-    setLists(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    if (!clean) return;
+    try {
+      const raw = localStorage.getItem('tm_user_lists_v1');
+      const arr = raw ? JSON.parse(raw) : [];
+      const norm = normalizeKey(clean);
+      if (!arr.some(x => normalizeKey(x) === norm)) {
+        arr.unshift(clean);
+        localStorage.setItem('tm_user_lists_v1', JSON.stringify(arr));
+      }
+    } catch (e) {
+      console.warn('save list fail', e);
+    }
+    setSelectedList(clean);
+    navigate(`/lists/${encodeURIComponent(clean)}`);
   };
 
-  const removeList = (list) => {
-    if (!window.confirm(`Remove list "${list}"?`)) return;
-    const next = lists.filter(l => l !== list);
-    setLists(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const removeList = (label, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Remove list "${label}"? This only removes it from your lists, tasks remain unchanged.`)) return;
+    try {
+      const raw = localStorage.getItem('tm_user_lists_v1');
+      const arr = raw ? JSON.parse(raw) : [];
+      const next = arr.filter(x => normalizeKey(x) !== normalizeKey(label));
+      localStorage.setItem('tm_user_lists_v1', JSON.stringify(next));
+    } catch (err) {
+      console.warn('remove list fail', err);
+    }
+    setSelectedList(null);
+    navigate('/');
   };
-
-  // count how many tasks belong to each list
-  const all = [...(tasks.today || []), ...(tasks.tomorrow || []), ...(tasks.week || [])];
-  const listCounts = {};
-  all.forEach(t => {
-    const listName = t.list || 'Unassigned';
-    listCounts[listName] = (listCounts[listName] || 0) + 1;
-  });
 
   return (
     <aside className="sidebar">
@@ -59,34 +68,59 @@ export default function Sidebar() {
         <div className="section">
           <h4 className="section-title">TASKS</h4>
           <ul className="nav-list">
-            <li><NavLink to="/" className={activeClass}>Upcoming <span className="badge">{counts.total}</span></NavLink></li>
-            <li><NavLink to="/today" className={activeClass}>Today <span className="muted-badge">{counts.today}</span></NavLink></li>
-            <li><NavLink to="/calendar" className={activeClass}>Calendar</NavLink></li>
-            <li><NavLink to="/sticky" className={activeClass}>Sticky Wall</NavLink></li>
+            <li>
+              <NavLink to="/" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                Upcoming <span className="badge">{counts.total ?? 0}</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/today" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                Today <span className="muted-badge">{counts.today ?? 0}</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/calendar" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                Calendar
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/sticky" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                Sticky Wall
+              </NavLink>
+            </li>
           </ul>
         </div>
 
         <div className="section">
           <h4 className="section-title">LISTS</h4>
           <ul className="lists">
-            {lists.map((list, i) => (
-              <li key={i} className="list-item" onClick={() => navigate(`/lists/${encodeURIComponent(list)}`)}>
-                <span className="dot dot-blue" /> {list}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span className="muted-badge">{listCounts[list] || 0}</span>
-                  <button
-                    className="mini-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeList(list);
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </li>
-            ))}
-            <li className="add-list" onClick={addList}>+ Add New List</li>
+            {availableLists.map((label, i) => {
+              const key = normalizeKey(label);
+              return (
+                <li
+                  key={i}
+                  className="list-item"
+                  onClick={() => goToList(label)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="dot dot-blue" /> {label}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span className="muted-badge">{listCounts[key] || 0}</span>
+                    <button
+                      className="mini-btn"
+                      onClick={(e) => removeList(label, e)}
+                      title="Remove list"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+
+            <li className="add-list" onClick={addListHandler} style={{ cursor: 'pointer' }}>
+              + Add New List
+            </li>
           </ul>
         </div>
 

@@ -280,10 +280,9 @@ body{
 /* Empty placeholder */
 .empty{ color:var(--muted); padding:8px; font-size:13px }
 
-/* Responsive: keep sidebar fixed (no collapse) */
 @media (max-width: 980px){
   .app{ padding:12px; gap:12px; max-width:100%; }
-  /* keep sidebar width as-is and allow scrolling if viewport smaller */
+
   .sidebar{
     position:fixed;
     left:12px;

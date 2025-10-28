@@ -23,11 +23,16 @@
 /* dark theme overrides */
 :root[data-theme='dark'] {
   --bg: #071025;
-  --panel: #07172a;
+  --panel: #0a152a;
   --muted: #94a3b8;
   --accent: #e6eef8;
-  --soft: rgba(255, 255, 255, 0.02);
-  --card-border: rgba(255, 255, 255, 0.04);
+  --soft: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --ui-gray: rgba(255, 255, 255, 0.08);
+  --mini-btn-border: rgba(255,255,255,0.08);
+  --menu-bg: #0c1a33;
+  --menu-border: rgba(255,255,255,0.08);
+  --shadow: 0 8px 28px rgba(2,6,12,0.6);
   background: linear-gradient(180deg, #071025 0%, #07172a 100%);
 }
 
@@ -97,12 +102,20 @@ body{
   align-items:center;
   color:var(--accent);
   text-decoration:none;
+  transition: background .15s ease, color .15s ease;
 }
+.nav-item:hover{ background:var(--soft); }
 .nav-item.active{
   background:linear-gradient(90deg,#fbfbfb,#f7f9fa);
   border:1px solid var(--card-border);
   box-shadow: inset 0 -1px 0 rgba(15,23,36,0.02);
 }
+:root[data-theme='dark'] .nav-item.active {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  border:1px solid var(--card-border);
+}
+
+/* badges */
 .badge{
   background:#fff;
   padding:4px 8px;
@@ -110,6 +123,11 @@ body{
   border:1px solid var(--card-border);
   font-weight:600;
   font-size:12px;
+}
+:root[data-theme='dark'] .badge {
+  background: rgba(255,255,255,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 .muted-badge{ color:var(--muted); font-size:12px; margin-left:8px }
 
@@ -147,7 +165,7 @@ body{
 }
 .add-list:hover{ background:var(--soft); }
 
-/* inline small button (used for kebab etc) */
+/* mini button */
 .mini-btn{
   padding:6px 8px;
   border-radius:8px;
@@ -170,57 +188,34 @@ body{
   box-shadow: 0 0 0 3px rgba(15,130,255,0.12);
 }
 
-/* list menu panel (kebab menu) */
-.list-menu{
-  position: absolute;
-  right: 0;
-  top: 36px;
-  background: var(--menu-bg);
-  border: 1px solid var(--menu-border);
-  box-shadow: 0 8px 30px rgba(6,10,14,0.12);
-  border-radius:10px;
-  padding:8px;
-  z-index:1200;
-  min-width:140px;
-}
-.list-menu .menu-btn{
-  width:100%;
-  padding:8px 10px;
-  border-radius:8px;
-  background:transparent;
-  border:0;
-  text-align:left;
-  color:var(--accent);
-  display:flex;
-  gap:8px;
-  align-items:center;
-  cursor:pointer;
-  font-size:13px;
-}
-.list-menu .menu-btn:hover{
-  background:var(--soft);
-}
-
 /* tags */
 .tags .tag-row{ display:flex; gap:8px; flex-wrap:wrap }
 .tag{ padding:6px 10px; border-radius:8px; background:#e9f7f9; border:0; cursor:pointer }
 .tag-outline{ background:#fff; border:1px solid var(--card-border) }
 .tag.add{ background:transparent; color:var(--muted) }
+:root[data-theme='dark'] .tag,
+:root[data-theme='dark'] .tag-outline,
+:root[data-theme='dark'] .tag.add {
+  background: rgba(255,255,255,0.06);
+  color: var(--accent);
+  border: 1px solid rgba(255,255,255,0.08);
+}
 
 /* Sidebar bottom */
 .sidebar-bottom{ margin-top:18px; border-top:1px dashed var(--ui-gray); padding-top:12px; display:flex; flex-direction:column; gap:8px }
 .sb-item{ color:var(--muted); font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:8px }
 
 /* Main area */
-.main-area{
-  flex:1;
-  min-height:calc(100vh - 56px);
-}
+.main-area{ flex:1; min-height:calc(100vh - 56px); }
 
 /* Dashboard header */
 .page-header{ margin-bottom:18px; display:flex; align-items:center; gap:12px }
 .page-header h1{ font-size:36px; margin:0; font-weight:700 }
 .page-header .count{ display:inline-block; background:#fff; border:1px solid var(--card-border); padding:6px 10px; border-radius:8px; margin-left:8px; font-weight:700 }
+:root[data-theme='dark'] .page-header .count {
+  background: rgba(255,255,255,0.08);
+  color: var(--accent);
+}
 
 /* Grid layout */
 .grid{ display:flex; gap:18px; align-items:flex-start }
@@ -260,27 +255,24 @@ body{
   padding:10px 12px;
   border-radius:10px;
   border:1px solid rgba(15,23,36,0.03);
-  background: #fbfbfc;
+  background:#fbfbfc;
 }
 .task-row.done{ opacity:0.6; text-decoration:line-through; }
+:root[data-theme='dark'] .task-row {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.06);
+}
 .task-left{ display:flex; align-items:center; gap:12px; }
 .task-left input[type="checkbox"]{ width:16px; height:16px; }
 .task-title{ font-size:14px; color:var(--accent) }
 .task-right{ display:flex; align-items:center; gap:8px }
-.chev{ width:14px; height:14px; opacity:0.6 }
-
-/* Edit input */
-.task-edit-input {
-  padding:8px 10px;
-  border-radius:8px;
-  border:1px solid var(--ui-gray);
-  font-size:14px;
-  color:var(--accent);
-}
+.chev{ width:14px; height:14px; opacity:0.6; filter:none; }
+:root[data-theme='dark'] .chev { filter: invert(1) brightness(1.2); }
 
 /* Empty placeholder */
 .empty{ color:var(--muted); padding:8px; font-size:13px }
 
+/* Responsive */
 @media (max-width: 980px){
   .app{ padding:12px; gap:12px; max-width:100%; }
 
@@ -320,7 +312,6 @@ body{
   animation: overlayFade .25s ease-out forwards;
 }
 
-/* NOTE: .popup-card preserved exactly as original (no changes) */
 .popup-card {
   width: 560px;
   max-width: 100%;
@@ -372,226 +363,27 @@ body{
 .popup-textarea { min-height:80px; resize:vertical; }
 .popup-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-/* actions */
-.popup-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+/* Buttons */
 .btn-cancel { background:transparent; border:1px solid rgba(15,23,36,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; }
 .btn-confirm { background:var(--accent); color:white; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
-
-/* small date badges inside task rows */
-.date-badge {
-  background: rgba(15,23,36,0.03);
-  padding:6px 8px;
-  border-radius:8px;
-  font-size:12px;
-  color:var(--muted);
-  display:inline-flex;
-  gap:6px;
-  align-items:center;
-  border:1px solid rgba(15,23,36,0.02);
-}
-.date-badge.due {
-  border-color: rgba(255,77,77,0.12);
-  background: rgba(255,77,77,0.04);
-  color: #c24141;
-}
-.date-text { color:var(--muted); font-weight:600; margin-left:4px; }
-
-@media (max-width:620px) {
-  .popup-card { width: 100%; margin: 8px; }
-  .popup-grid { grid-template-columns:1fr; }
+:root[data-theme='dark'] .btn-confirm {
+  background: linear-gradient(90deg,#0a84d6,#0b95e6);
 }
 
-/* Toast container (top-right) */
-.toast-root {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
+/* Toasts */
+.toast-root{ position:fixed; top:18px; right:18px; z-index:2000; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast-item{ pointer-events:auto; min-width:220px; max-width:420px; padding:10px 14px; border-radius:10px; background:rgba(10,12,16,0.96); color:white; box-shadow:0 8px 30px rgba(7,10,20,0.42); border:1px solid rgba(255,255,255,0.04); font-size:14px; }
+.toast-item.toast-success{ background:linear-gradient(90deg,#0f9d58,#0f7a5a); }
+.toast-item.toast-error{ background:linear-gradient(90deg,#c24141,#9d2b2b); }
 
-.toast-item {
-  pointer-events: auto;
-  min-width: 220px;
-  max-width: 420px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(10,12,16,0.96);
-  color: white;
-  box-shadow: 0 8px 30px rgba(7,10,20,0.42);
-  border: 1px solid rgba(255,255,255,0.04);
-  transform-origin: right top;
-  animation: toastIn .22s ease-out;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.toast-item.toast-success { background: linear-gradient(90deg,#0f9d58,#0f7a5a); }
-.toast-item.toast-error { background: linear-gradient(90deg,#c24141,#9d2b2b); }
-.toast-body { display:flex; align-items:center; gap:10px; }
-.toast-message { font-weight:600; }
-
-@keyframes toastIn {
-  from { transform: translateY(-8px) scale(0.98); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-/* New task highlight animation */
+/* Animations */
 @keyframes newGlow {
-  0% { box-shadow: 0 8px 30px rgba(15,130,255,0.12); transform: translateY(-4px); }
-  60% { box-shadow: 0 10px 36px rgba(15,130,255,0.08); transform: translateY(0); }
-  100% { box-shadow: 0 6px 18px rgba(15,23,36,0.06); transform: translateY(0); }
+  0% { box-shadow:0 8px 30px rgba(15,130,255,0.12); transform:translateY(-4px); }
+  60% { box-shadow:0 10px 36px rgba(15,130,255,0.08); transform:translateY(0); }
+  100% { box-shadow:0 6px 18px rgba(15,23,36,0.06); transform:translateY(0); }
 }
 
 .task-row.new {
   animation: newGlow 1.2s ease-out;
   border-color: rgba(15,130,255,0.12);
 }
-
-/* ------------------- Dark-mode targeted improvements -------------------
-   These rules only apply when :root[data-theme='dark'] is set.
-   They avoid changing .popup-card and keep popup visuals identical.
----------------------------------------------------------------------- */
-
-:root[data-theme='dark'] {
-  /* helper overrides */
-  --dark-contrast: #e6eef8;
-  --dark-muted-contrast: #94a3b8;
-  --dark-surface: rgba(255,255,255,0.02);
-  --dark-border-soft: rgba(255,255,255,0.03);
-}
-
-/* Panels / cards / sidebar background in dark */
-:root[data-theme='dark'] .sidebar,
-:root[data-theme='dark'] .task-card,
-:root[data-theme='dark'] .toast-item {
-  background: var(--panel);
-  color: var(--dark-contrast);
-  border-color: var(--dark-border-soft);
-  box-shadow: 0 8px 28px rgba(2,6,12,0.6);
-}
-
-/* Keep popup card exactly same as original => do NOT override .popup-card here */
-
-/* Fix nav-item active contrast for dark */
-:root[data-theme='dark'] .nav-item.active {
-  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border: 1px solid var(--dark-border-soft);
-  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.01);
-}
-
-/* Dark badges */
-:root[data-theme='dark'] .badge {
-  background: rgba(255,255,255,0.03);
-  color: var(--panel);
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-/* Task rows dark surface */
-:root[data-theme='dark'] .task-row {
-  background: var(--dark-surface);
-  border: 1px solid var(--dark-border-soft);
-}
-:root[data-theme='dark'] .task-row.done {
-  opacity: 0.7;
-  color: var(--dark-muted-contrast);
-}
-
-/* Inputs / selects / textarea contrast in dark */
-:root[data-theme='dark'] .search input,
-:root[data-theme='dark'] .popup-input,
-:root[data-theme='dark'] .popup-textarea,
-:root[data-theme='dark'] .popup-select,
-:root[data-theme='dark'] .task-input,
-:root[data-theme='dark'] .task-edit-input {
-  background: var(--soft);
-  color: var(--dark-contrast);
-  border: 1px solid var(--dark-border-soft);
-}
-
-/* Popup header border & close color (popup appearance unchanged) */
-:root[data-theme='dark'] .popup-header {
-  border-bottom: 1px solid var(--dark-border-soft);
-}
-:root[data-theme='dark'] .popup-close {
-  color: var(--dark-muted-contrast);
-}
-
-/* Buttons contrast */
-:root[data-theme='dark'] .btn-confirm {
-  background: linear-gradient(90deg, #0a84d6, #0b95e6);
-  color: white;
-  border: 0;
-}
-:root[data-theme='dark'] .btn-cancel,
-:root[data-theme='dark'] .mini-btn {
-  background: transparent;
-  color: var(--dark-muted-contrast);
-  border: 1px solid rgba(255,255,255,0.04);
-}
-:root[data-theme='dark'] .mini-btn:hover,
-:root[data-theme='dark'] .btn-cancel:hover {
-  color: var(--dark-contrast);
-  border-color: rgba(255,255,255,0.08);
-}
-
-/* Date badges & meta */
-:root[data-theme='dark'] .date-badge {
-  background: rgba(255,255,255,0.02);
-  color: var(--dark-muted-contrast);
-  border: 1px solid rgba(255,255,255,0.02);
-}
-
-/* Tag pills in dark */
-:root[data-theme='dark'] .tag,
-:root[data-theme='dark'] .tag-outline,
-:root[data-theme='dark'] .tag.add {
-  background: rgba(255,255,255,0.02);
-  color: var(--dark-contrast);
-  border: 1px solid rgba(255,255,255,0.03);
-}
-
-/* Focus outlines for keyboard users (dark) */
-:root[data-theme='dark'] input:focus,
-:root[data-theme='dark'] select:focus,
-:root[data-theme='dark'] textarea:focus,
-:root[data-theme='dark'] button:focus {
-  outline: 2px solid rgba(248, 244, 5, 0.18);
-  outline-offset: 2px;
-}
-
-/* Ensure smaller text uses readable color */
-:root[data-theme='dark'] .page-header h1,
-:root[data-theme='dark'] .task-title,
-:root[data-theme='dark'] .card-header h3 {
-  color: var(--dark-contrast);
-}
-
-/* Invert small icons if they're images to improve contrast */
-:root[data-theme='dark'] .chev,
-:root[data-theme='dark'] .sidebar img,
-:root[data-theme='dark'] .task-right img {
-  filter: invert(1) brightness(1.15) contrast(1.05);
-}
-/* Fix hardcoded light backgrounds in task rows */
-:root[data-theme='dark'] .app [style*="#fff"],
-:root[data-theme='dark'] .app [style*="#fbfbfc"],
-:root[data-theme='dark'] .app [style*="#fbfbfb"] {
-  background: var(--panel) !important;
-  color: var(--dark-contrast) !important;
-}
-/* ------------------- Smooth Theme Transition ------------------- */
-html, body, .app, .sidebar, .task-card, .task-row, .btn-confirm, 
-.btn-cancel, .mini-btn, input, textarea, select, .tag, .nav-item, 
-.page-header h1, .card-header h3 {
-  transition: 
-    background-color 0.35s ease,
-    color 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-
